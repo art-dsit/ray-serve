@@ -142,6 +142,7 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
 
     deployment = VLLMDeployment.options(
         ray_actor_options={
+            "num_cpus": 32,
             "resources": {
                 "worker_node": 1.0,
                 "head_node": 0
