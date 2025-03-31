@@ -141,7 +141,6 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     logger.info(f"Tensor parallelism = {tp}")
 
     deployment = VLLMDeployment.options(
-        num_cpus=8,
         ray_actor_options={
             "resources": {
                 "worker_node": 1.0,
