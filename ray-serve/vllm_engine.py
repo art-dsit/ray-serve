@@ -132,21 +132,23 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     else:
         accelerator = "GPU"
     parsed_args = parse_vllm_args(cli_args)
-    logger.info(f"Parsed args: {parsed_args}") # ADDED LOGGING
+    logger.info(f"Parsed args: {parsed_args}")
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
-    logger.info(f"Engine args: {engine_args}") # ADDED LOGGING
+    logger.info(f"Engine args: {engine_args}")
     engine_args.worker_use_ray = True
 
     tp = engine_args.tensor_parallel_size
     logger.info(f"Tensor parallelism = {tp}")
-    pg_resources = []
-    pg_resources.append({"CPU": 1})  # for the deployment replica
-    for i in range(tp):
-        pg_resources.append({"CPU": 1, accelerator: 1})  # for the vLLM actors
 
-    # We use the "STRICT_PACK" strategy below to ensure all vLLM actors are placed on
-    # the same Ray node.
-    return VLLMDeployment.bind(
+    deployment = VLLMDeployment.options(
+        num_cpus=8,
+        ray_actor_options={
+            "resources": {
+                "worker_node": 1.0,
+                "head_node": 0
+            }
+        }
+    ).bind(
         engine_args,
         parsed_args.response_role,
         parsed_args.lora_modules,
@@ -154,3 +156,5 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
         cli_args.get("request_logger"),
         parsed_args.chat_template,
     )
+
+    return deployment
