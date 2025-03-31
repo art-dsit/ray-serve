@@ -17,7 +17,7 @@ from vllm.entrypoints.openai.protocol import (
     ChatCompletionResponse,
     ErrorResponse,
 )
-from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+from vllm.entrypoints.openai.serving_chat import OpenAIServingChat, BaseModelPath
 from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
@@ -25,7 +25,6 @@ from vllm.entrypoints.logger import RequestLogger
 logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
-
 
 @serve.deployment(name="VLLMDeployment")
 @serve.ingress(app)
@@ -60,15 +59,15 @@ class VLLMDeployment:
         """
         if not self.openai_serving_chat:
             model_config = await self.engine.get_model_config()
-            # Determine the name of the served model for the OpenAI client.
-            if self.engine_args.served_model_name is not None:
-                served_model_names = self.engine_args.served_model_name
-            else:
-                served_model_names = [self.engine_args.model]
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                served_model_names,
+                [
+                    BaseModelPath(
+                        name=self.engine_args.served_model_name or self.engine_args.model, 
+                        model_path=self.engine_args.model
+                    )
+                ],
                 self.response_role,
                 lora_modules=self.lora_modules,
                 prompt_adapters=self.prompt_adapters,
