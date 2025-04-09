@@ -1,6 +1,6 @@
 import os
 
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 import logging
 
 from fastapi import FastAPI
@@ -18,7 +18,6 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
 
@@ -34,8 +33,8 @@ class VLLMDeployment:
         self,
         engine_args: AsyncEngineArgs,
         response_role: str,
-        lora_modules: Optional[List[LoRAModulePath]] = None,
-        prompt_adapters: Optional[List[PromptAdapterPath]] = None,
+        lora_modules: Optional[List[Any]] = None,
+        prompt_adapters: Optional[List[Any]] = None,
         request_logger: Optional[RequestLogger] = None,
         chat_template: Optional[str] = None,
     ):
@@ -70,8 +69,6 @@ class VLLMDeployment:
                 model_config,
                 served_model_names,
                 self.response_role,
-                lora_modules=self.lora_modules,
-                prompt_adapters=self.prompt_adapters,
                 request_logger=self.request_logger,
                 chat_template=self.chat_template,
             )
