@@ -17,7 +17,7 @@ from vllm.entrypoints.openai.protocol import (
     ChatCompletionResponse,
     ErrorResponse,
 )
-from vllm.entrypoints.openai.serving_chat import OpenAIServingChat, BaseModelPath
+from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
@@ -25,6 +25,7 @@ from vllm.entrypoints.logger import RequestLogger
 logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
+
 
 @serve.deployment(name="VLLMDeployment")
 @serve.ingress(app)
@@ -59,21 +60,20 @@ class VLLMDeployment:
         """
         if not self.openai_serving_chat:
             model_config = await self.engine.get_model_config()
+            # Determine the name of the served model for the OpenAI client.
+            if self.engine_args.served_model_name is not None:
+                served_model_names = self.engine_args.served_model_name
+            else:
+                served_model_names = [self.engine_args.model]
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                [
-                    BaseModelPath(
-                        name=self.engine_args.served_model_name or self.engine_args.model, 
-                        model_path=self.engine_args.model
-                    )
-                ],
+                served_model_names,
                 self.response_role,
                 lora_modules=self.lora_modules,
                 prompt_adapters=self.prompt_adapters,
                 request_logger=self.request_logger,
                 chat_template=self.chat_template,
-                chat_template_content_format='auto'
             )
         logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
@@ -88,8 +88,6 @@ class VLLMDeployment:
         else:
             assert isinstance(generator, ChatCompletionResponse)
             return JSONResponse(content=generator.model_dump())
-
-
 
 
 def parse_vllm_args(cli_args: Dict[str, str]):
@@ -115,7 +113,6 @@ def parse_vllm_args(cli_args: Dict[str, str]):
             arg_strings.append(f"--{key}")
 
     parsed_args = parser.parse_args(args=arg_strings)
-
     return parsed_args
 
 
@@ -132,9 +129,7 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     else:
         accelerator = "GPU"
     parsed_args = parse_vllm_args(cli_args)
-    logger.info(f"Parsed args: {parsed_args}")
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
-    logger.info(f"Engine args: {engine_args}")
     engine_args.worker_use_ray = True
 
     tp = engine_args.tensor_parallel_size
