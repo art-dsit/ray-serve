@@ -18,6 +18,12 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+from vllm.entrypoints.openai.serving_models import (
+    BaseModelPath,
+    LoRAModulePath,
+    PromptAdapterPath,
+    OpenAIServingModels,
+)
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
 
@@ -33,8 +39,8 @@ class VLLMDeployment:
         self,
         engine_args: AsyncEngineArgs,
         response_role: str,
-        lora_modules: Optional[List[Any]] = None,
-        prompt_adapters: Optional[List[Any]] = None,
+        lora_modules: Optional[List[LoRAModulePath]] = None,
+        prompt_adapters: Optional[List[PromptAdapterPath]] = None,
         request_logger: Optional[RequestLogger] = None,
         chat_template: Optional[str] = None,
     ):
@@ -60,17 +66,25 @@ class VLLMDeployment:
         if not self.openai_serving_chat:
             model_config = await self.engine.get_model_config()
             # Determine the name of the served model for the OpenAI client.
-            if self.engine_args.served_model_name is not None:
-                served_model_names = self.engine_args.served_model_name
-            else:
-                served_model_names = [self.engine_args.model]
+            models = OpenAIServingModels(
+                self.engine,
+                model_config,
+                [
+                    BaseModelPath(
+                        name=self.engine_args.model, model_path=self.engine_args.model
+                    )
+                ],
+                lora_modules=self.lora_modules,
+                prompt_adapters=self.prompt_adapters,
+            )
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                served_model_names,
+                models,
                 self.response_role,
                 request_logger=self.request_logger,
                 chat_template=self.chat_template,
+                chat_template_content_format="auto",
             )
         logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
