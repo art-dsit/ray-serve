@@ -146,6 +146,8 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     tp = engine_args.tensor_parallel_size
     logger.info(f"Tensor parallelism = {tp}")
 
+    logger.info(f"VLLM_USE_V1: {os.getenv('VLLM_USE_V1', 'not set')}")
+
     deployment = VLLMDeployment.options(
         ray_actor_options={
             "num_cpus": 32,
@@ -162,5 +164,7 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
         cli_args.get("request_logger"),
         parsed_args.chat_template,
     )
+
+    logger.info(f"VLLM_USE_V1 post bind: {os.getenv('VLLM_USE_V1', 'not set')}")
 
     return deployment
