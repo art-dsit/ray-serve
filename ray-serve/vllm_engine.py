@@ -10,7 +10,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 from ray import serve
 
 from vllm.engine.arg_utils import AsyncEngineArgs
-from vllm.engine.async_llm_engine import AsyncLLMEngine
+from vllm.v1.engine.async_llm import AsyncLLM
 from vllm.entrypoints.openai.cli_args import make_arg_parser
 from vllm.entrypoints.openai.protocol import (
     ChatCompletionRequest,
@@ -52,7 +52,7 @@ class VLLMDeployment:
         self.prompt_adapters = prompt_adapters
         self.request_logger = request_logger
         self.chat_template = chat_template
-        self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+        self.engine = AsyncLLM.from_engine_args(engine_args)
 
     @app.post("/v1/chat/completions")
     async def create_chat_completion(
