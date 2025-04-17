@@ -101,7 +101,7 @@ class VLLMDeployment:
             return JSONResponse(content=generator.model_dump())
 
 
-    @app.post("/v1/models")
+    @app.get("/v1/models")
     async def list_models(self):
         """List all models available in the vLLM engine."""
         model_config = await self.engine.get_model_config()
@@ -116,7 +116,7 @@ class VLLMDeployment:
             lora_modules=self.lora_modules,
             prompt_adapters=self.prompt_adapters,
         )
-        return JSONResponse(content=models.model_list())
+        return JSONResponse(content=(await models.show_available_models()).model_dump())
 
 def parse_vllm_args(cli_args: Dict[str, str]):
     """Parses vLLM args based on CLI inputs.
